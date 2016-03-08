@@ -9,12 +9,15 @@ function buildPluginInstallTask(plugin) {
         console.log('installing %s...', plugin);
         require('child-process-promise').exec('npm install -g ' + plugin).then(
             function (result) {
-                callback(result);
+                callback();
+            },
+            function (err) {
+                callback();
             }
         ).progress(
             function(childProgress) {
                 childProgress.stdout.on('data', function (data) {
-                    console.log('[exec] stdout: ', data.toString());
+                    console.log(data.toString());
                 });
             }
         );
