@@ -8,7 +8,7 @@ var chalk = require('chalk');
 
 function buildPluginInstallTask(plugin) {
     return function (callback) {
-        console.log('installing %s...', plugin);
+        console.log(chalk.yellow('installing ' + plugin + '...'));
         require('child-process-promise').exec('npm install -g ' + plugin).then(
             function (result) {
                 callback(null, true);
