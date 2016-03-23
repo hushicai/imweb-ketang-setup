@@ -3,19 +3,19 @@
 var program = require('commander');
 
 program.usage('-c <configuration-file>')
-    .option('-c --config <configuration-file>', 'fis插件配置列表，默认当前目录下fis-plugins.js')
+    .option('-c --config <configuration-file>', 'fis配置文件，默认当前目录下fis-conf.js')
     .parse(process.argv);
 
 var fs = require('fs');
 var confFile = require('path').join(
     process.cwd(),
-    program.config || 'fis-plugins.js'
+    program.config || 'fis-conf.js'
 );
 
 
 if (!fs.existsSync(confFile)) {
     console.log(
-        '当前目录下没有找到默认的fis插件配置文件`fis-plugins.js`，您可以自定义的配置文件', 
+        '当前目录下没有找到默认的fis插件配置文件`fis-conf.js`，您可以自定义的配置文件', 
         '详见`imweb-ketang-setup -h`'
     );
 }

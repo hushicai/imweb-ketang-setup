@@ -4,15 +4,17 @@
  */
 
 
+var chalk = require('chalk');
+
 function buildPluginInstallTask(plugin) {
     return function (callback) {
         console.log('installing %s...', plugin);
         require('child-process-promise').exec('npm install -g ' + plugin).then(
             function (result) {
-                callback();
+                callback(null, true);
             },
             function (err) {
-                callback();
+                callback(null, false);
             }
         ).progress(
             function(childProgress) {
@@ -24,36 +26,58 @@ function buildPluginInstallTask(plugin) {
     };
 }
 
-exports.setup = function (conf) {
-    // 项目依赖的fis插件
-    var plugins = require(conf);
+function doInstallPlugin(err, plugins) {
+    if (err) {
+        console.log(err);
+        return;
+    }
 
-    require('./lib/get-installed-global-package')().then(
-        function (pkgs) {
-            var pkgIndex = {};
+    console.log('found dependent plugins: \n', plugins);
+    console.log('checking installed package...');
 
-            // 标记为已安装
-            pkgs.forEach(function (pkg) {
+    plugins = plugins || [];
+    require('bluebird').all([
+        require('./lib/get-installed-package')('global'),
+        require('./lib/get-installed-package')('local')
+    ]).then(function (result) {
+        var globalPkgs = result[0];
+        var localPkgs = result[1];
+        var pkgIndex = {};
+        globalPkgs.concat(localPkgs).forEach(function (pkg) {
+            if (/^fis/.test(pkg.name)) {
                 pkgIndex[pkg.name] = 1;
-            });
-
-            var tasks = [];
-            plugins.forEach(function (plugin) {
-                // 如果还未安装，则安装之
-                if (!pkgIndex[plugin]) {
-                    tasks.push(
-                        buildPluginInstallTask(plugin)
-                    );
-                }
-            });
-
-            if (!tasks.length) {
-                console.log('所有依赖插件已经就绪!');
-                return;
             }
+        });
 
-            // 串行执行
-            require('async').series(tasks);
+        var tasks = [];
+        var pluginsToInstall = [];
+        plugins.forEach(function (plugin) {
+            // 如果还未安装，则安装之
+            if (!pkgIndex[plugin]) {
+                tasks.push(
+                    buildPluginInstallTask(plugin)
+                );
+                pluginsToInstall.push(plugin);
+            }
+            else {
+                console.log(chalk.red(plugin) + ' is installed.');
+            }
+        });
+
+        if (pluginsToInstall.length) {
+            console.log('plugins need to install: \n', pluginsToInstall);
         }
-    );
+        else {
+            console.log('everything is ok!');
+            return;
+        }
+
+
+        // 串行执行
+        require('async').series(tasks);
+    });
+}
+
+exports.setup = function () {
+    require('./lib/find-dependent-package')(doInstallPlugin);
 };
